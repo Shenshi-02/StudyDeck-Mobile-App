@@ -42,7 +42,7 @@ import com.example.studydeck.model.Flashcard
 import com.example.studydeck.ui.components.ConfirmDeleteDialog
 import com.example.studydeck.ui.components.ErrorView
 import com.example.studydeck.ui.components.LoadingView
-import com.example.studydeck.viewmodel.FlashcardListState
+import com.example.studydeck.ui.theme.FlashcardListState
 
 
 @OptIn(ExperimentalMaterial3Api::class)

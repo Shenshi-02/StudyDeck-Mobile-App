@@ -1,4 +1,4 @@
-package com.example.studydeck
+package com.example.studydeck.model
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,10 +9,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.example.studydeck.navigation.StudyDeckNavGraph
 import com.example.studydeck.ui.theme.StudyDeckTheme
-import com.example.studydeck.viewmodel.AuthViewModel
-import com.example.studydeck.viewmodel.DeckViewModel
-import com.example.studydeck.viewmodel.FlashcardViewModel
-import com.example.studydeck.viewmodel.StudyDeckFactory
 
 class MainActivity : ComponentActivity() {
 

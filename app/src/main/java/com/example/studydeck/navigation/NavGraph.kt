@@ -19,28 +19,26 @@ import com.example.studydeck.ui.screens.HomeScreen
 import com.example.studydeck.ui.screens.LoginScreen
 import com.example.studydeck.ui.screens.RegisterScreen
 import com.example.studydeck.ui.screens.ReviewScreen
-import com.example.studydeck.viewmodel.AuthViewModel
-import com.example.studydeck.viewmodel.DeckViewModel
-import com.example.studydeck.viewmodel.FlashcardListState
-import com.example.studydeck.viewmodel.FlashcardViewModel
+import com.example.studydeck.model.AuthViewModel
+import com.example.studydeck.model.DeckViewModel
+import com.example.studydeck.ui.theme.FlashcardListState
+import com.example.studydeck.model.FlashcardViewModel
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
     object Home : Screen("home")
 
-    // cards of one deck
+
     object Deck : Screen("deck/{deckId}") {
         fun createRoute(deckId: String) = "deck/$deckId"
     }
 
-    // no deckId -> create mode
     object AddEditDeck : Screen("add_edit_deck?deckId={deckId}") {
         fun createRoute(deckId: String? = null) =
             if (deckId == null) "add_edit_deck" else "add_edit_deck?deckId=$deckId"
     }
 
-    // no cardId -> add mode
     object AddEditCard : Screen("add_edit_card/{deckId}?cardId={cardId}") {
         fun createRoute(deckId: String, cardId: String? = null) =
             if (cardId == null) "add_edit_card/$deckId" else "add_edit_card/$deckId?cardId=$cardId"
@@ -64,12 +62,10 @@ fun StudyDeckNavGraph(
     val cardList by flashcardViewModel.uiState.collectAsStateWithLifecycle()
     val cardActionError by flashcardViewModel.actionError.collectAsStateWithLifecycle()
 
-    // Firebase keeps the session, so a returning user goes straight to Home.
     val startDestination = remember {
         if (authViewModel.currentUser.value != null) Screen.Home.route else Screen.Login.route
     }
 
-    // Load (or clear) the decks whenever the logged-in user changes.
     LaunchedEffect(currentUser?.id) {
         if (currentUser != null) {
             deckViewModel.loadDecks()
@@ -79,7 +75,6 @@ fun StudyDeckNavGraph(
         }
     }
 
-    // If nobody is logged in (after logout), send the user back to the login screen.
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     LaunchedEffect(currentUser, currentRoute) {
         val onAuthScreen = currentRoute == Screen.Login.route || currentRoute == Screen.Register.route
@@ -129,7 +124,6 @@ fun StudyDeckNavGraph(
             )
         }
 
-        // ----- Decks -----
 
         composable(Screen.Home.route) {
             HomeScreen(
@@ -181,8 +175,6 @@ fun StudyDeckNavGraph(
             )
         }
 
-
-
         composable(
             route = Screen.Deck.route,
             arguments = listOf(navArgument("deckId") { type = NavType.StringType })
@@ -191,7 +183,7 @@ fun StudyDeckNavGraph(
 
             LaunchedEffect(deckId) { flashcardViewModel.loadCards(deckId) }
 
-
+            // do not show the cards of a previously opened deck
             val state = if (cardList.deckId == deckId) cardList else FlashcardListState(isLoading = true)
             val deck = deckList.decks.find { it.id == deckId }
 
@@ -259,7 +251,16 @@ fun StudyDeckNavGraph(
             ReviewScreen(
                 flashcards = state.cards,
                 subject = deck?.subject ?: "",
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onSessionEnd = { cardsViewed, startedAt ->
+                    flashcardViewModel.recordStudySession(
+                        deckId = deckId,
+                        deckTitle = deck?.title ?: "",
+                        cardsReviewed = cardsViewed,
+                        totalCards = state.cards.size,
+                        startedAtMillis = startedAt
+                    )
+                }
             )
         }
     }

@@ -27,7 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.studydeck.model.Deck
 import com.example.studydeck.ui.components.LoadingView
-import com.example.studydeck.viewmodel.ItemState
+import com.example.studydeck.ui.theme.ItemState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

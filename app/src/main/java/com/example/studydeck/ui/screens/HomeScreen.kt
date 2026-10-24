@@ -43,7 +43,7 @@ import com.example.studydeck.model.Deck
 import com.example.studydeck.ui.components.ConfirmDeleteDialog
 import com.example.studydeck.ui.components.ErrorView
 import com.example.studydeck.ui.components.LoadingView
-import com.example.studydeck.viewmodel.DeckListState
+import com.example.studydeck.ui.theme.DeckListState
 
 
 @OptIn(ExperimentalMaterial3Api::class)

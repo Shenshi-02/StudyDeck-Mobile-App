@@ -1,7 +1,6 @@
-package com.example.studydeck
+package com.example.studydeck.model
 
 import android.app.Application
-import com.example.studydeck.data.FirebaseRepository
 
 class StudyDeckApplication : Application() {
     val repository by lazy { FirebaseRepository() }

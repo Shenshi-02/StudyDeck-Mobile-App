@@ -1,8 +1,8 @@
-package com.example.studydeck.viewmodel
+package com.example.studydeck.model
 
 import androidx.lifecycle.ViewModel
-import com.example.studydeck.data.FirebaseRepository
-import com.example.studydeck.model.Flashcard
+import com.example.studydeck.ui.theme.FlashcardListState
+import com.example.studydeck.ui.theme.ItemState
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -104,6 +104,16 @@ class FlashcardViewModel(private val repository: FirebaseRepository) : ViewModel
         repository.deleteCard(deckId, card.id) { success, message ->
             if (!success) _actionError.value = message ?: "Could not delete the card"
         }
+    }
+
+    fun recordStudySession(
+        deckId: String,
+        deckTitle: String,
+        cardsReviewed: Int,
+        totalCards: Int,
+        startedAtMillis: Long
+    ) {
+        repository.recordStudySession(deckId, deckTitle, cardsReviewed, totalCards, startedAtMillis)
     }
 
     fun dismissActionError() {

@@ -1,8 +1,6 @@
-package com.example.studydeck.viewmodel
+package com.example.studydeck.model
 
 import androidx.lifecycle.ViewModel
-import com.example.studydeck.data.FirebaseRepository
-import com.example.studydeck.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,7 +54,7 @@ class AuthViewModel(private val repository: FirebaseRepository) : ViewModel() {
         _currentUser.value = null
     }
 
-    // replaces the email-based name with the saved display name
+
     private fun loadName() {
         val user = repository.currentUser() ?: return
         repository.loadDisplayName { name ->

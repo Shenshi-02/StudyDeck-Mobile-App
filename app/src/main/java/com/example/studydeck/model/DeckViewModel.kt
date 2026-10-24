@@ -1,8 +1,8 @@
-package com.example.studydeck.viewmodel
+package com.example.studydeck.model
 
 import androidx.lifecycle.ViewModel
-import com.example.studydeck.data.FirebaseRepository
-import com.example.studydeck.model.Deck
+import com.example.studydeck.ui.theme.DeckListState
+import com.example.studydeck.ui.theme.ItemState
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,7 +61,6 @@ class DeckViewModel(private val repository: FirebaseRepository) : ViewModel() {
         _deckState.value = ItemState.Idle
     }
 
-    // onSuccess runs only after Firestore saved the deck
     fun createDeck(
         title: String,
         subject: String,

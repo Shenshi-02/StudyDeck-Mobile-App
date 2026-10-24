@@ -1,8 +1,7 @@
-package com.example.studydeck.viewmodel
+package com.example.studydeck.model
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.example.studydeck.data.FirebaseRepository
 
 class StudyDeckFactory(
     private val repository: FirebaseRepository

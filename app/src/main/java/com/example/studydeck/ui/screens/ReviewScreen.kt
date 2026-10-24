@@ -28,10 +28,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,10 +51,26 @@ import kotlinx.coroutines.launch
 fun ReviewScreen(
     flashcards: List<Flashcard>,
     subject: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    // called once when the user leaves Study Mode: (cards viewed, start time in millis)
+    onSessionEnd: (Int, Long) -> Unit = { _, _ -> }
 ) {
     val pagerState = rememberPagerState(pageCount = { flashcards.size })
     val scope = rememberCoroutineScope()
+
+    // Study session: when it started and the furthest card the user reached
+    val startedAt = remember { System.currentTimeMillis() }
+    var cardsViewed by remember { mutableIntStateOf(0) }
+    val latestOnSessionEnd by rememberUpdatedState(onSessionEnd)
+
+    LaunchedEffect(pagerState.currentPage, flashcards.size) {
+        if (flashcards.isNotEmpty()) {
+            cardsViewed = maxOf(cardsViewed, pagerState.currentPage + 1)
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose { latestOnSessionEnd(cardsViewed, startedAt) }
+    }
 
     Scaffold(
         topBar = {

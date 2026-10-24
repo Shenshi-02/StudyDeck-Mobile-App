@@ -1,9 +1,7 @@
-package com.example.studydeck.data
+package com.example.studydeck.model
 
-import com.example.studydeck.model.Deck
-import com.example.studydeck.model.Flashcard
-import com.example.studydeck.model.User
 import com.google.firebase.FirebaseNetworkException
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
@@ -15,6 +13,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import java.util.Date
 
 class FirebaseRepository {
 
@@ -28,10 +27,11 @@ class FirebaseRepository {
     private fun cardsRef(uid: String, deckId: String) =
         decksRef(uid).document(deckId).collection("cards")
 
+    private fun subjectsRef(uid: String) = userDoc(uid).collection("subjects")
+
+    private fun sessionsRef(uid: String) = userDoc(uid).collection("studySessions")
 
 
-    // Firebase keeps the session, so this is not null if the user never logged out.
-    // The real name is loaded from Firestore with loadDisplayName().
     fun currentUser(): User? {
         val user = auth.currentUser ?: return null
         val email = user.email ?: ""
@@ -84,7 +84,6 @@ class FirebaseRepository {
         auth.signOut()
     }
 
-    // Reads the name saved in users/{uid}. Gives null if it can't be loaded.
     fun loadDisplayName(onResult: (String?) -> Unit) {
         val uid = auth.currentUser?.uid
         if (uid == null) {
@@ -95,8 +94,6 @@ class FirebaseRepository {
             .addOnSuccessListener { document -> onResult(document.getString("displayName")) }
             .addOnFailureListener { onResult(null) }
     }
-
-
 
 
     fun listenToDecks(onResult: (List<Deck>, String?) -> Unit): ListenerRegistration? {
@@ -117,7 +114,6 @@ class FirebaseRepository {
                 onResult(decks, null)
             }
     }
-
 
     fun getDeck(deckId: String, onResult: (Deck?, String?) -> Unit) {
         val uid = auth.currentUser?.uid
@@ -146,18 +142,26 @@ class FirebaseRepository {
             return
         }
 
-        val deck = hashMapOf(
-            "title" to title.trim(),
-            "subject" to subject.trim(),
-            "description" to description.trim(),
-            "createdAt" to FieldValue.serverTimestamp(),
-            "updatedAt" to FieldValue.serverTimestamp()
-        )
+        ensureSubject(uid, subject) { subjectId, subjectError ->
+            if (subjectId == null) {
+                onResult(false, subjectError)
+                return@ensureSubject
+            }
 
-        decksRef(uid)
-            .add(deck)
-            .addOnSuccessListener { onResult(true, null) }
-            .addOnFailureListener { error -> onResult(false, dbMessage(error)) }
+            val deck = hashMapOf<String, Any>(
+                "title" to title.trim(),
+                "subjectId" to subjectId,
+                "subject" to subject.trim(),
+                "description" to description.trim(),
+                "createdAt" to FieldValue.serverTimestamp(),
+                "updatedAt" to FieldValue.serverTimestamp()
+            )
+
+            decksRef(uid)
+                .add(deck)
+                .addOnSuccessListener { onResult(true, null) }
+                .addOnFailureListener { error -> onResult(false, dbMessage(error)) }
+        }
     }
 
     fun updateDeck(
@@ -173,20 +177,26 @@ class FirebaseRepository {
             return
         }
 
-        val updates = mapOf(
-            "title" to title.trim(),
-            "subject" to subject.trim(),
-            "description" to description.trim(),
-            "updatedAt" to FieldValue.serverTimestamp()
-        )
+        ensureSubject(uid, subject) { subjectId, subjectError ->
+            if (subjectId == null) {
+                onResult(false, subjectError)
+                return@ensureSubject
+            }
 
-        decksRef(uid).document(deckId)
-            .update(updates)
-            .addOnSuccessListener { onResult(true, null) }
-            .addOnFailureListener { error -> onResult(false, dbMessage(error)) }
+            val updates = mapOf<String, Any>(
+                "title" to title.trim(),
+                "subjectId" to subjectId,
+                "subject" to subject.trim(),
+                "description" to description.trim(),
+                "updatedAt" to FieldValue.serverTimestamp()
+            )
+
+            decksRef(uid).document(deckId)
+                .update(updates)
+                .addOnSuccessListener { onResult(true, null) }
+                .addOnFailureListener { error -> onResult(false, dbMessage(error)) }
+        }
     }
-
-
     fun deleteDeck(deckId: String, onResult: (Boolean, String?) -> Unit) {
         val uid = auth.currentUser?.uid
         if (uid == null) {
@@ -227,7 +237,6 @@ class FirebaseRepository {
                 onResult(cards, null)
             }
     }
-
 
     fun getCard(deckId: String, cardId: String, onResult: (Flashcard?, String?) -> Unit) {
         val uid = auth.currentUser?.uid
@@ -306,6 +315,54 @@ class FirebaseRepository {
     }
 
 
+    private fun ensureSubject(uid: String, subject: String, onResult: (String?, String?) -> Unit) {
+        val name = subject.trim()
+        if (name.isEmpty()) {
+            onResult("", null)
+            return
+        }
+
+        subjectsRef(uid).whereEqualTo("name", name).limit(1).get()
+            .addOnSuccessListener { snapshot ->
+                val existing = snapshot.documents.firstOrNull()
+                if (existing != null) {
+                    onResult(existing.id, null)
+                    return@addOnSuccessListener
+                }
+
+                val newSubject = hashMapOf<String, Any>(
+                    "name" to name,
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+                subjectsRef(uid)
+                    .add(newSubject)
+                    .addOnSuccessListener { ref -> onResult(ref.id, null) }
+                    .addOnFailureListener { error -> onResult(null, dbMessage(error)) }
+            }
+            .addOnFailureListener { error -> onResult(null, dbMessage(error)) }
+    }
+
+    fun recordStudySession(
+        deckId: String,
+        deckTitle: String,
+        cardsReviewed: Int,
+        totalCards: Int,
+        startedAtMillis: Long
+    ) {
+        val uid = auth.currentUser?.uid ?: return
+        if (cardsReviewed <= 0) return
+
+        val session = hashMapOf<String, Any>(
+            "deckId" to deckId,
+            "deckTitle" to deckTitle,
+            "cardsReviewed" to cardsReviewed,
+            "totalCards" to totalCards,
+            "startedAt" to Timestamp(Date(startedAtMillis)),
+            "endedAt" to FieldValue.serverTimestamp()
+        )
+        sessionsRef(uid).add(session)
+    }
+
 
     private fun DocumentSnapshot.toDeck(): Deck? {
         if (!exists()) return null
@@ -313,7 +370,8 @@ class FirebaseRepository {
             id = id,
             title = getString("title") ?: return null,
             subject = getString("subject") ?: "General",
-            description = getString("description") ?: ""
+            description = getString("description") ?: "",
+            subjectId = getString("subjectId") ?: ""
         )
     }
 
