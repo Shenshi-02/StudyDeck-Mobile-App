@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gcm_defaultSenderId" translatable="false">746413844667</string>
+    <string name="google_api_key" translatable="false">AIzaSyD-q10L6XebREXTcmIEGrGit6QSqsq5DUo</string>
+    <string name="google_app_id" translatable="false">1:746413844667:android:f5534cbf2e3287046d619e</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyD-q10L6XebREXTcmIEGrGit6QSqsq5DUo</string>
+    <string name="google_storage_bucket" translatable="false">studydeck-17792.firebasestorage.app</string>
+    <string name="project_id" translatable="false">studydeck-17792</string>
+</resources>
